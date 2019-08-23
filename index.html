@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>visualizer</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg.js/2.7.1/svg.min.js"></script>
+    <script src="./index.js" type="text/javascript"></script>
+</head>
+
+<body style="padding-top: 40px; ">
+    <div class="ui container">
+        <h1 class="ui header">4th Asprova Procon Visualizer Ver.7</h1>
+        <div class="ui stackable grid container">
+            <div class="five wide column">
+                <div class="ui form">
+                    <div class="field">
+                        <label>input file</label>
+                        <input id="inputFile" type="file" />
+                    </div>
+                </div>
+            </div>
+            <div class="five wide column">
+                <div class="ui form">
+                    <div class="field">
+                        <label>output file</label>
+                        <input id="outputFile" type="file" />
+                    </div>
+                </div>
+            </div>
+            <div class="four wide bottom aligned column">
+                <button id="reloadButton" class="ui large olive disabled button"><i class="redo icon"></i>
+                    reload</button>
+            </div>
+        </div>
+
+        <div class="ui divider"></div>
+
+        <div class="ui column stackable doubling grid container">
+            <div class="four wide column">
+                <div class="ui labeled input">
+                    <div class="ui label">粗利合計<br>(gross profit)</div>
+                    <input id="grossP" style="width: 160px; " type="text" readonly />
+                </div>
+            </div>
+            <div class="six wide column">
+                <div class="ui labeled input">
+                    <div class="ui label">納期遅れペナルティ額合計<br>(delay penalty sum)</div>
+                    <input id="d-cost" style="width: 212px; " type="text" readonly />
+                </div>
+            </div>
+            <div class="six wide column">
+                <div class="ui labeled input">
+                    <div class="ui label">段取り時間ペナルティ額合計<br>(setup penalty sum)</div>
+                    <input id="s-cost" type="text" readonly />
+                </div>
+            </div>
+        </div>
+        <div class="ui two column stackable doubling grid container">
+            <div class="column">
+                <div class="ui labeled input">
+                    <div class="ui orange label">利益<br>(total profit)</div>
+                    <input id="score" style="width: 163px; " type="text" readonly />
+                </div>
+            </div>
+            <div class="right aligned column" style="padding-top: 38px">
+                <button id="zoomout" class="ui mini disabled button">-</button>
+                <button id="resize" class="ui mini disabled button">resize</button>
+                <button id="zoomin" class="ui mini disabled button">+</button>
+            </div>
+        </div>
+        <div id="drawing" class="ui segment" style="height: 2000px; margin-top: 5px;"></div>
+    </div>
+
+    <div style="padding-top: 40px; "></div>
+
+    <div id="tooltip" style="position: fixed; display: none; background: cornsilk; border: 1px solid black; border-radius: 5px; padding: 5px; z-index: 1000; font-size: 12px; line-height: 1.2em;">
+    </div>
+</body>
+
+</html>

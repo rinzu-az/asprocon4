@@ -53,9 +53,45 @@ struct Bom {
 
 struct Operation {
   int r, m, t1, t2, t3;
+  Operation (){}
   Operation (int _r, int _m, int _t1, int _t2, int _t3) :
     r(_r), m(_m), t1(_t1), t2(_t2), t3(_t3) {}
 };
+
+int M, I, R, BL, CL;
+vector<Order> orders;
+vector<Bom> boms;
+vector<Operation> operations;
+vector<map<Pii, int>> setupTimes;
+
+void readProblem() {
+  string _str;
+  cin >> _str >> M >> I >> R >> BL >> CL;
+  boms.resize(I);
+  for (int n = 0; n < BL; ++n) {
+    int i, m, s;
+    cin >> _str >> i >> m >> s;
+    boms[i].infos.push_back(Pii(m,s));
+  }
+  setupTimes.resize(M);
+  for (int n = 0; n < CL; ++n) {
+    int m, i_pre, i_nxt, t;
+    cin >> _str >> m >> i_pre >> i_nxt >> t;
+    setupTimes[m][Pii(i_pre, i_nxt)] = t;
+  }
+  for (int n = 0; n < R; ++n) {
+    int r, i, e, d, q, pr, a;
+    cin >> _str >> r >> i >> e >> d >> q >> pr >> a;
+    orders.push_back(Order(r, i, e, d, q, pr, a));
+  }
+}
+
+void writeSolution() {
+  for (int n = 0; n < R; ++n) {
+    Operation& ope = operations[n];
+    cout << ope.r << '\t' << ope.m << '\t' << ope.t1 << '\t' << ope.t2 << '\t' << ope.t3 << endl;
+  }
+}
 
 ll eval(vector<Operation> operations){
     for (int n = 0; n < R; ++n) {
@@ -175,41 +211,6 @@ ll eval(vector<Operation> operations){
     return P;
 }
 
-int M, I, R, BL, CL;
-vector<Order> orders;
-vector<Bom> boms;
-vector<Operation> operations;
-vector<map<Pii, int>> setupTimes;
-
-void readProblem() {
-  string _str;
-  cin >> _str >> M >> I >> R >> BL >> CL;
-  boms.resize(I);
-  for (int n = 0; n < BL; ++n) {
-    int i, m, s;
-    cin >> _str >> i >> m >> s;
-    boms[i].infos.push_back(Pii(m,s));
-  }
-  setupTimes.resize(M);
-  for (int n = 0; n < CL; ++n) {
-    int m, i_pre, i_nxt, t;
-    cin >> _str >> m >> i_pre >> i_nxt >> t;
-    setupTimes[m][Pii(i_pre, i_nxt)] = t;
-  }
-  for (int n = 0; n < R; ++n) {
-    int r, i, e, d, q, pr, a;
-    cin >> _str >> r >> i >> e >> d >> q >> pr >> a;
-    orders.push_back(Order(r, i, e, d, q, pr, a));
-  }
-}
-
-void writeSolution() {
-  for (int n = 0; n < R; ++n) {
-    Operation& ope = operations[n];
-    cout << ope.r << '\t' << ope.m << '\t' << ope.t1 << '\t' << ope.t2 << '\t' << ope.t3 << endl;
-  }
-}
-
 void solve() {
   stable_sort(all(orders), [](const Order& o1, const Order& o2) { return o1.e < o2.e; });
   for(auto bom : boms){
@@ -224,7 +225,7 @@ void solve() {
     Bom& bom = boms[order.i];
     Operation& ope = operations[n];
     int m, s;
-    tie(m,s) = bom.infos[0];
+    tie(m,s) = bom.infos[rand(0,len(bom.infos)-1)];
     ope.r = order.r;
     ope.m = m;
     if (mToPreviousI[m] < 0) {

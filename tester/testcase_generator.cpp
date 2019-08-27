@@ -258,7 +258,7 @@ int main(int argc, char const* argv[]) {
     o.i = rand(0, I-1);
     o.q = rand(1, Q);
     o.pr = o.q*boms[o.i].pr;
-    o.a = rand(1, A);
+    o.a = A == 0 ? 1000 : rand(1, A);
 
     int meanManuTime = o.q*boms[o.i].mean_s;
     int _Dmin = max(Dmin, int(meanManuTime*manuTimeToPeriodRatio));

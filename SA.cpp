@@ -20,11 +20,13 @@ clock_t start = clock();
 
 #ifdef LOCAL
   constexpr bool DEBUG = false;
-  const double TIME_LIMIT = 9.8;
+  constexpr bool INFO = false;
+  const double TIME_LIMIT = 9.9;
   mt19937 mt = random_engine();
 #else
   constexpr bool DEBUG = false;
-  const double TIME_LIMIT = 9.8;
+  constexpr bool INFO = false;
+  const double TIME_LIMIT = 9.9;
   random_device seed;
   mt19937 mt(seed());
 #endif
@@ -35,6 +37,9 @@ int rand(int min, int max){
 
 bool chance(int percent){
   return rand(0,99) < percent;
+}
+bool chance(int r, int max){
+  return rand(0,max-1) < r;
 }
 
 double get_time(){
@@ -101,7 +106,7 @@ void writeSolution() {
 }
 
 vector<Operation> toOperations(vector<vector<int>> ans) {
-  vector<Operation> opes(R);
+  vector<Operation> opes;
   for(int i=0; i<M; i++){
     int t1 = 0, prev = -1;
     vector<int> machine = ans[i];
@@ -109,7 +114,7 @@ vector<Operation> toOperations(vector<vector<int>> ans) {
       int n = machine[j];
       Order& order = orders[n];
       Bom& bom = boms[order.i];
-      Operation& ope = opes[order.r];
+      Operation ope;
       int s = 1;
       for(auto b : bom.infos){
         if(b.first == i){
@@ -127,12 +132,13 @@ vector<Operation> toOperations(vector<vector<int>> ans) {
       }
       ope.t3 = ope.t2 + order.q * s;
       t1 = ope.t3; prev = order.i;
+      opes.push_back(ope);
     }
   }
   return opes;
 }
 
-vector<vector<int>> neighbor(vector<vector<int>> ans, bool flg){
+vector<vector<int>> neighbor(vector<vector<int>> ans, bool flg = false){
   int m = rand(0,M-1);
   int from = rand(0,len(ans[m])-1);
   int n = m;
@@ -142,139 +148,54 @@ vector<vector<int>> neighbor(vector<vector<int>> ans, bool flg){
   }
   int to = rand(0,len(ans[n])-1);
   int tmp = ans[m][from];
+
   ans[m].erase(ans[m].begin()+from);
   ans[n].insert(ans[n].begin()+to,tmp);
+
   if(DEBUG) cout << m << " " << from << " " << to << endl;
   return ans;
 }
 
 ll eval(vector<Operation> operations){
-    for (int n = 0; n < R; ++n) {
-      Operation ope = operations[n];
-      int r,m,t1,t2,t3;
-      tie(r, m, t1, t2, t3) = make_tuple(ope.r, ope.m, ope.t1, ope.t2, ope.t3);
-
-      if (r < 0 || r >= R) {
-        if(DEBUG) cerr << "r is out of range" << endl;
-        return -1;
-      }
-      if (m < 0 || m >= M) {
-        if(DEBUG) cerr << "m is out of range" << endl;
-        return -1;
-      }
-      if (t1 < 0 || t1 > MAX_TIME) {
-        if(DEBUG) cerr << "t1 is out of range" << endl;
-        return -1;
-      }
-      if (t2 < 0 || t2 > MAX_TIME) {
-        if(DEBUG) cerr << "t2 is out of range" << endl;
-        return -1;
-      }
-      if (t3 <= 0 || t3 > MAX_TIME) {
-        if(DEBUG) cerr << "t3 is out of range" << endl;
-        return -1;
-      }
+  // 評価
+  ll V1 = 0, V2 = 0;
+  for (int n = 0; n < R; ++n) {
+    Operation& ope = operations[n];
+    Order& order = orders[ope.r];
+    V1 += ope.t2 - ope.t1;
+    if (ope.t3 <= order.d) {
+      V2 += order.pr;
+    } else {
+      ll delay = ope.t3 - order.d;
+      V2 += order.pr - ceil((double)order.pr * delay / order.a);
     }
+  }
 
-    set<int> orderSet;
-    for (int n = 0; n < R; ++n) {
-      if (orderSet.count(operations[n].r) == 1) {
-        if(DEBUG) cerr << "分割禁止 : Split operation detected" << endl;
-        return -1;
-      }
-      orderSet.insert(operations[n].r);
-    }
+  ll P = P_MAX - V1 + V2;
+  return P;
+}
 
-    sort(all(operations), [](const Operation& o1, const Operation& o2) {
-          if (o1.m != o2.m) {
-            return o1.m < o2.m;
-          } else {
-            return o1.t1 < o2.t1;
-          }
-        });
-
-
-    vector<int> mToPreviousT3(M, 0);
-    vector<int> mToPreviousI(M, -1);
-
-    // 作業ごとの制約チェック
-    for (int n = 0; n < R; ++n) {
-      Operation& ope = operations[n];
-      Order& order = orders[ope.r];
-      Bom& bom = boms[order.i];
-      int m = ope.m;
-      int e = (mToPreviousI[m] < 0) ? order.e : max(order.e, mToPreviousT3[m]);
-      bool canAssign = false;
-      int mIndex = 0;
-      for (int j = 0; j < len(bom.infos); ++j) {
-        if (bom.infos[j].first == m) {
-          canAssign = true;
-          mIndex = j;
-          break;
-        }
-      }
-      if (!canAssign) {
-        if(DEBUG) cerr << "BOM違反 : BOM violation " << n << " " << ope.m << " " << ope.r << " " << ope.t1 << " " << ope.t3 << endl;
-        return -1;
-      }
-      if (e > ope.t1) {
-        if(DEBUG) cerr << "製造開始時刻違反 : Scheduling start time violation " << n  << " " << order.e << " " << e << " " << ope.r << endl;
-        return -1;
-      }
-      if (ope.t1 > ope.t2 || ope.t2 > ope.t3) {
-        if(DEBUG) cerr << "段取り開始時刻、製造開始時刻と製造終了時刻順番違反: t1 <= t2 && t2 <= t3" << endl;
-        return -1;
-      }
-      if (mToPreviousI[m] >= 0) {
-        int setupT = setupTimes[m][Pii(mToPreviousI[m], order.i)];
-        if ((ope.t2 - ope.t1) != setupT) {
-          if(DEBUG) cerr << "段取り時間間違い: Invalid Setup Time" << endl;
-          return -1;
-        }
-      } else {
-        if ((ope.t2 - ope.t1) != 0) {
-          if(DEBUG) cerr << "段取り時間間違い: Invalid Setup Time" << endl;
-          return -1;
-        }
-      }
-      int manuT = order.q * bom.infos[mIndex].second;
-      if ((ope.t3 - ope.t2) != manuT) {
-        if(DEBUG) cerr << "製造時間間違い : Manufacturing time error" << endl;
-        return -1;
-      }
-
-      mToPreviousI[m] = order.i;
-      mToPreviousT3[m] = ope.t3;
-    } // operation loop end
-
-    // 評価
-    ll V1 = 0, V2 = 0;
-    for (int n = 0; n < R; ++n) {
-      Operation& ope = operations[n];
-      Order& order = orders[ope.r];
-      V1 += ope.t2 - ope.t1;
-      if (ope.t3 <= order.d) {
-        V2 += order.pr;
-      } else {
-        ll delay = ope.t3 - order.d;
-        V2 += order.pr - ceil((double)order.pr * delay / order.a);
-      }
-    }
-
-    ll P = P_MAX - V1 + V2;
-    return P;
+vector<vector<int>> shuffle(vector<vector<int>>& ans, int i){
+  int m = rand(0,M-1);
+  int from = i; // rand(0,len(ans[m])-1);
+  int n = rand(0,M-1);;
+  int to = rand(0,len(ans[n])-1);
+  swap(ans[m][from],ans[n][to]);
+  return ans;
 }
 
 class simulated_annealing{
   //varibale
   int temp = 100000;
-  vector<vector<int>> ans;
-  ll score = 0;
-  int cnt=0;
+  using format = vector<vector<int>>;
+  format bestAns, ans;
+  ll bestScore = 0, score = 0;
+  int cnt = 0;
 
   //function
   bool accept(){
-    return chance(temp/10000000);
+    if(R == 1000) return false;
+    return chance(temp/500, 10000);
   }
   void change_temp(){
     temp *= 0.995;
@@ -283,30 +204,69 @@ class simulated_annealing{
   //constructor
   public:
   simulated_annealing() {}
-  simulated_annealing(vector<vector<int>> _ans) :
+  simulated_annealing(format _ans) :
     ans(_ans) {}
   
-  vector<vector<int>> exec(){
+  format exec(double timeLimit){
     bool flg = true;
-    while(get_time() < TIME_LIMIT){
-      if(flg && get_time() > 7.0) flg = false;
+    while(get_time() < timeLimit){
+      //if(flg && get_time() > 7.0) flg = false;
       for(int i=0; i<100; i++){
-        vector<vector<int>> newAns = neighbor(ans, flg);
+        format newAns = neighbor(ans, flg);
         ll newScore = eval(toOperations(newAns));
-        if(DEBUG){
-          cout << "newScore : " << newScore << " Score : " <<  score << endl;
-          cnt++;
-        }
-        if(accept() || newScore > score){
+        if(DEBUG) cout << "newScore : " << newScore << " Score : " <<  score << endl;
+
+        if((newScore > 0 && accept()) || newScore > score){
           tie(ans,score) = make_pair(newAns, newScore);
         }
+        if(score > bestScore) tie(bestAns, bestScore) = make_pair(ans, score);
         change_temp();
+        cnt++;
       }
     }
-    if(DEBUG) cout << cnt << endl;
+    if(INFO) cout << cnt << endl;
     return ans;
   }
 };
+
+class beam_search{
+  //varibale
+  int width = 10;
+  using format = vector<vector<int>>;
+  multimap<ll,format> beams;
+  ll bestScore = 0, score = 0;
+  int cnt = 0;
+
+  //function
+
+
+  //constructor
+  public:
+  beam_search() {}
+  beam_search(format _ans){
+    beams.insert(make_pair(eval(toOperations(_ans)), _ans));
+  }
+  
+  vector<vector<int>> exec(double timeLimit){
+    while(get_time() < timeLimit){
+      multimap<ll, format> newBeams = beams;
+      for(auto beam : beams){
+        format newAns = neighbor(beam.second);
+        ll newScore = eval(toOperations(newAns));
+        if(DEBUG) cout << "newScore : " << newScore << " Score : " <<  score << endl;
+
+        newBeams.insert(make_pair(newScore, newAns));
+        cnt++;
+      }
+      while((int)newBeams.size() > width){
+        newBeams.erase(newBeams.begin());
+      }
+    }
+    if(INFO) cout << cnt << endl;
+    return (*beams.rbegin()).second;
+  }
+};
+
 
 void solve() {
   vector<Order> _orders = orders;
@@ -315,8 +275,7 @@ void solve() {
     sort(all(bom.infos), [](const Pii& info1, const Pii& info2){ return info1.second > info2.second; });
   }
 
-  //int hoge = M==1 ? 2e7 : 0;
-  vector<Pii> prev(M,Pii(0,-1)); //t3, i
+  vector<Pii> prev(M, Pii(0,-1)); //t3, i
   vector<vector<int>> ans(M);
 
   operations.resize(R);
@@ -351,11 +310,24 @@ void solve() {
     prev[m] = Pii(ope.t3, order.i);
     ans[m].push_back(order.r);
   }
-  eval(operations);
-  eval(toOperations(ans));
-  simulated_annealing SA(ans);
-  ans = SA.exec();
-
+  if(M == 1){
+    auto best = ans;
+    for(int i=0; i<19; i++){
+      simulated_annealing SA(ans);
+      auto tmp = SA.exec((i+1) * 0.5);
+      if(eval(toOperations(tmp)) > eval(toOperations(best))) best = tmp;
+      ans = best;
+      for(int j=0; j<5; j++) shuffle(ans, j);
+    }
+    simulated_annealing SA(best);
+    ans = SA.exec(TIME_LIMIT);
+  }else if(M == 0){
+    beam_search BS(ans); 
+    ans = BS.exec(TIME_LIMIT);
+  }else{
+    simulated_annealing SA(ans);
+    ans = SA.exec(TIME_LIMIT);
+  }
   operations = toOperations(ans);
 }
 

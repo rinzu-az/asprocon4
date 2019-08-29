@@ -268,9 +268,8 @@ tuple<int,int,int,int,ll> neighborR(vector<vector<int>>& ans, bool flg = true){
     }
   }
   int from = rand(0,len(ans[m])-1);
-  int n = m;
   vector<Pii> bominfo = boms[orders[ans[m][from]].i].infos;
-  n = bominfo[rand(0,len(bominfo)-1)].first;
+  int n = bominfo[rand(0,len(bominfo)-1)].first;
 
   int to = rand(0,len(ans[n])-1);
   if(DEBUG) cout << m << " " << n << " " << from << " " << to << endl;
@@ -284,13 +283,18 @@ tuple<int,int,int,int,ll> neighborR(vector<vector<int>>& ans, bool flg = true){
   return make_tuple(m, from, n, to , newScore - prevScore);
 }
 
-vector<vector<int>> shuffle(vector<vector<int>>& ans, int i){
+tuple<int,int,ll> swapnext(vector<vector<int>>& ans){
   int m = rand(0,M-1);
-  int from = i; // rand(0,len(ans[m])-1);
-  int n = rand(0,M-1);;
-  int to = rand(0,len(ans[n])-1);
-  swap(ans[m][from],ans[n][to]);
-  return ans;
+  while(len(ans[m]) < 2) m = rand(0, M-1);
+  int left = rand(0,len(ans[m])-2);
+
+  ll prevScore = eval(ans, m, -1);
+
+  swap(ans[m][left],ans[m][left+1]);
+
+  ll newScore = eval(ans, m, -1);
+
+  return make_tuple(m, left, newScore - prevScore);
 }
 
 class simulated_annealing{
@@ -306,8 +310,8 @@ class simulated_annealing{
   bool accept(){
     return chance(temp/3 + 100000, 1000000);
   }
-  bool accept(int _score, int _newScore){
-    return chance( (int)(max(0.0, -(time/TIME_LIMIT)*60.0 + 50.0)*10000 + 50000 - max(0, (_score - _newScore))*2.3), 1000000);
+  bool accept(int diff){
+    return chance( (int)(max(0.0, -(time/TIME_LIMIT)*60.0 + 50.0)*10000 + 50000 - max(0, -diff)*1.9), 1000000);
   }
   void change_temp(){
     //if(temp>0) temp -= 2;
@@ -322,62 +326,29 @@ class simulated_annealing{
   format exec(double timeLimit, int type = 0){
     bool flg = true;
     while((time = get_time()) < timeLimit){
-      //if(flg && get_time() > 9.0) flg = false;
+      if(flg && time > 9.5) flg = false;
       for(int i=0; i<100; i++){
         int m, n, from, to; ll diff;
-        tie(m, from, n, to, diff) = neighborR(ans, flg);
+        if(flg) tie(m, from, n, to, diff) = neighborR(ans, flg);
+        if(!flg) tie(m, from, diff) = swapnext(ans);
         ll newScore = score + diff;
         if(DEBUG) cout << "newScore : " << newScore << " Score : " <<  score << endl;
 
-        if(accept(score, newScore) || newScore > score){
+        if( (flg && accept(diff)) || newScore > score){
           score = newScore;
           if(newScore > bestScore){
             bestAns = ans; bestScore = newScore;
           }
         }else{
-          move_order(ans, n, to, m, from);
+          if(flg) move_order(ans, n, to, m, from);
+          if(!flg) swap(ans[m][from], ans[m][from+1]);
         }
-        change_temp();
+        //change_temp();
         cnt++;
       }
     }
     if(INFO) cout << cnt << "\t";
     return bestAns;
-  }
-};
-
-class beam_search{
-  //varibale
-  int width = 10;
-  using format = vector<vector<int>>;
-  multimap<ll,format> beams;
-  ll bestScore = 0, score = 0;
-  int cnt = 0;
-
-  //constructor
-  public:
-  beam_search() {}
-  beam_search(format _ans){
-    beams.insert(make_pair(eval(_ans), _ans));
-  }
-  
-  vector<vector<int>> exec(double timeLimit){
-    while(get_time() < timeLimit){
-      multimap<ll, format> newBeams = beams;
-      for(auto beam : beams){
-        format newAns = neighbor(beam.second);
-        ll newScore = eval(newAns);
-        if(DEBUG) cout << "newScore : " << newScore << " Score : " <<  score << endl;
-
-        newBeams.insert(make_pair(newScore, newAns));
-        cnt++;
-      }
-      while((int)newBeams.size() > width){
-        newBeams.erase(newBeams.begin());
-      }
-    }
-    if(INFO) cout << cnt << endl;
-    return (*beams.rbegin()).second;
   }
 };
 
